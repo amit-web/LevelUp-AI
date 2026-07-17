@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0b0d12;
+  background-image:
+    radial-gradient(60% 55% at 50% -10%, rgba(167, 139, 250, 0.12), transparent 70%),
+    radial-gradient(45% 45% at 85% 10%, rgba(34, 211, 197, 0.08), transparent 70%);
+  color: #e7ebf2;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(167, 139, 250, 0.3);
+}
+
+/* Slim scrollbar for card overflow */
+.thin-scroll::-webkit-scrollbar { width: 6px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: #2a2f3a; border-radius: 999px; }
+
+/* Graph-paper grid backdrop, evokes a notebook / study feel */
+.bg-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+  animation: grid-pan 50s linear infinite;
+}
+
+@keyframes grid-pan {
+  from { background-position: 0 0; }
+  to { background-position: 280px 280px; }
+}
+
+/* Soft ambient orbs in the three level colors, drifting slowly */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.32;
+}
+.orb-child { background: #F5A524; }
+.orb-dev { background: #22D3C5; }
+.orb-expert { background: #A78BFA; }
+
+@keyframes float-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(50px, -35px) scale(1.1); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, 30px) scale(1.06); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -25px) scale(1.12); }
+}
+.animate-float-a { animation: float-a 18s ease-in-out infinite; }
+.animate-float-b { animation: float-b 24s ease-in-out infinite; }
+.animate-float-c { animation: float-c 21s ease-in-out infinite; }
+
+/* Study-themed glyphs (book, bulb, formulas) drifting upward like rising ideas */
+.particle {
+  animation-name: particle-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  opacity: 0;
+  filter: grayscale(0.15);
+}
+
+@keyframes particle-drift {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.45; }
+  92% { opacity: 0.45; }
+  100% { transform: translateY(-105vh) rotate(12deg); opacity: 0; }
+}
+
+/* Thin shimmering gradient bar across the top — a subtle "session in progress" cue */
+.learning-bar {
+  background: linear-gradient(90deg, #F5A524, #22D3C5, #A78BFA, #F5A524);
+  background-size: 300% 100%;
+  animation: bar-sweep 10s linear infinite;
+  opacity: 0.75;
+}
+
+@keyframes bar-sweep {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* React Flow ships a white pane background by default; keep the Next Steps
+   Map transparent so it blends with the app's dark panels. */
+.react-flow {
+  background: transparent;
+}
+.react-flow__attribution {
+  display: none;
+}
