@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NextStepsMap } from "./components/NextStepsMap";
 import { StoryReader } from "./components/StoryReader";
+import { CodePlayground, type CodeVariable } from "./components/CodePlayground";
 
 type Audience = "child" | "developer" | "expert";
 type Style = "base" | "simpler" | "deeper" | "example";
@@ -39,6 +40,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [related, setRelated] = useState<string[]>([]);
   const [quiz, setQuiz] = useState<Quiz[]>([]);
+  const [devCode, setDevCode] = useState("");
+  const [devVariables, setDevVariables] = useState<CodeVariable[]>([]);
+  const [codeStatus, setCodeStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +97,28 @@ export default function Home() {
     }
   }
 
+  async function fetchCode(q: string) {
+    setCodeStatus("loading");
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch("/api/code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: q }),
+        });
+        const data = await res.json();
+        if (res.ok && data.code) {
+          setDevCode(data.code);
+          setDevVariables(Array.isArray(data.variables) ? data.variables : []);
+          setCodeStatus("ready");
+          return;
+        }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+    setCodeStatus("error");
+  }
+
   async function explain(t?: string) {
     const q = (t ?? topic).trim();
     if (!q || active) return;
@@ -103,6 +129,9 @@ export default function Home() {
     setCards(empty());
     setRelated([]);
     setQuiz([]);
+    setDevCode("");
+    setDevVariables([]);
+    setCodeStatus("idle");
     pushHistory(q);
     window.scrollTo({ top: 260, behavior: "smooth" });
 
@@ -125,6 +154,10 @@ export default function Home() {
         await new Promise((r) => setTimeout(r, 1500));
       }
     })();
+
+    // "Try it live" code playground — independent of the explanation
+    // stream so a slow/failed generation never blocks the text.
+    fetchCode(q);
 
     await Promise.all(LEVELS.map((l) => streamCard(q, l.key, "base")));
     setActive(false);
@@ -234,9 +267,12 @@ export default function Home() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }}
-                  className="relative flex flex-col overflow-hidden rounded-2xl border border-edge bg-panel/60 p-5"
+                  className="relative flex flex-col rounded-2xl border border-edge bg-panel/60 p-5"
                 >
-                  <div className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: lvl.accent }} />
+                  <div
+                    className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl"
+                    style={{ backgroundColor: lvl.accent }}
+                  />
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-display text-lg font-semibold" style={{ color: lvl.accent }}>
@@ -297,6 +333,47 @@ export default function Home() {
           </div>
 
           <AnimatePresence>
+            {codeStatus !== "idle" && !cards.developer.streaming && (
+              <motion.section
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-14"
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${codeStatus === "loading" ? "animate-pulse" : ""}`}
+                    style={{ backgroundColor: "#22D3C5" }}
+                  />
+                  <h3 className="font-display text-lg font-semibold text-white">Try it live</h3>
+                  <span className="text-xs text-white/30">
+                    {codeStatus === "loading"
+                      ? "— generating an editable example…"
+                      : "— from the developer explanation, tweak the values and watch the console"}
+                  </span>
+                </div>
+
+                {codeStatus === "loading" && <PlaygroundSkeleton accent="#22D3C5" />}
+
+                {codeStatus === "error" && (
+                  <div className="flex items-center justify-between rounded-2xl border border-edge bg-panel/60 px-5 py-4 text-sm text-white/50">
+                    <span>Couldn&apos;t generate a live example this time.</span>
+                    <button
+                      onClick={() => fetchCode(current)}
+                      className="rounded-lg border border-edge px-3 py-1.5 text-xs text-white/70 transition hover:border-white/25 hover:text-white"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {codeStatus === "ready" && (
+                  <CodePlayground code={devCode} variables={devVariables} accent="#22D3C5" />
+                )}
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
             {related.length > 0 && (
               <motion.section
                 initial={{ opacity: 0, y: 12 }}
@@ -355,6 +432,34 @@ function Skeleton() {
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.12 }}
         />
       ))}
+    </div>
+  );
+}
+
+/** Placeholder shaped like the finished playground — toolbar + split editor/console — while the snippet generates. */
+function PlaygroundSkeleton({ accent }: { accent: string }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-edge" style={{ borderColor: `${accent}30` }}>
+      <div className="flex items-center gap-2 border-b border-edge bg-black/25 px-4 py-3">
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
+        <div className="h-2.5 w-16 animate-pulse rounded bg-white/10" />
+        <div className="h-2.5 w-10 animate-pulse rounded-full bg-white/5" />
+      </div>
+      <div className="grid grid-cols-2 gap-px bg-edge">
+        {[0, 1].map((col) => (
+          <div key={col} className="space-y-2.5 bg-panel/60 p-4" style={{ height: 360 }}>
+            {[95, 80, 88, 60, 70, 40].map((w, i) => (
+              <motion.div
+                key={i}
+                className="h-2.5 rounded bg-white/10"
+                style={{ width: `${w}%` }}
+                animate={{ opacity: [0.3, 0.65, 0.3] }}
+                transition={{ duration: 1.3, repeat: Infinity, delay: (col * 6 + i) * 0.1 }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
