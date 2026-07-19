@@ -12,10 +12,10 @@ type Style = "base" | "simpler" | "deeper" | "example";
 type Card = { text: string; streaming: boolean; style: Style };
 type Quiz = { question: string; options: string[]; correct: number; why: string };
 
-const LEVELS: { key: Audience; label: string; tag: string; accent: string; glyph: string }[] = [
-  { key: "child", label: "Like I'm a child", tag: "no jargon", accent: "#F5A524", glyph: "01" },
-  { key: "developer", label: "Like I'm a developer", tag: "how it works", accent: "#22D3C5", glyph: "02" },
-  { key: "expert", label: "Like I'm an expert", tag: "the deep end", accent: "#A78BFA", glyph: "03" },
+const LEVELS: { key: Audience; label: string; tag: string; accent: string; glyph: string; short: string }[] = [
+  { key: "child", label: "Like I'm a child", tag: "no jargon", accent: "#F5A524", glyph: "01", short: "Child" },
+  { key: "developer", label: "Like I'm a developer", tag: "how it works", accent: "#22D3C5", glyph: "02", short: "Developer" },
+  { key: "expert", label: "Like I'm an expert", tag: "the deep end", accent: "#A78BFA", glyph: "03", short: "Expert" },
 ];
 
 const EXAMPLES = ["JavaScript event loop", "How HTTPS works", "Database indexing", "Why the sky is blue"];
@@ -43,6 +43,7 @@ export default function Home() {
   const [devCode, setDevCode] = useState("");
   const [devVariables, setDevVariables] = useState<CodeVariable[]>([]);
   const [codeStatus, setCodeStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [mobileLevel, setMobileLevel] = useState<Audience>("child");
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -258,78 +259,71 @@ export default function Home() {
             Explaining <span className="font-medium text-white/70">&ldquo;{current}&rdquo;</span>
           </p>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {LEVELS.map((lvl, i) => {
-              const card = cards[lvl.key];
-              return (    
-                <motion.article
-                  key={lvl.key}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                  className="relative flex flex-col rounded-2xl border border-edge bg-panel/60 p-5"
-                >
-                  <div
-                    className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl"
-                    style={{ backgroundColor: lvl.accent }}
-                  />
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="font-display text-lg font-semibold" style={{ color: lvl.accent }}>
-                        {lvl.glyph}
-                      </span>
-                      <div>
-                        <h2 className="text-sm font-semibold text-white">{lvl.label}</h2>
-                        <p className="text-[11px] text-white/40">
-                          {card.style === "base" ? lvl.tag : `${card.style} view`}
-                        </p>
-                      </div>
-                    </div>
-                    {card.text && !card.streaming && <CopyButton text={card.text} accent={lvl.accent} />}
-                  </div>
+          {/* Desktop / tablet: all three levels visible at once, side by side. */}
+          <div className="hidden gap-4 md:grid md:grid-cols-3">
+            {LEVELS.map((lvl, i) => (
+              <LevelCard
+                key={lvl.key}
+                lvl={lvl}
+                card={cards[lvl.key]}
+                onAction={(style) => streamCard(current, lvl.key, style)}
+                motion={{
+                  initial: { opacity: 0, y: 16 },
+                  animate: { opacity: 1, y: 0 },
+                  transition: { delay: i * 0.06 },
+                }}
+              />
+            ))}
+          </div>
 
-                  <div className="min-h-[96px] flex-1">
-                    {card.text ? (
-                      card.streaming ? (
-                        // Still streaming: show the raw growing text with a
-                        // blinking cursor. Pagination only kicks in once the
-                        // full explanation has arrived — you can't page
-                        // through slides that don't exist yet.
-                        <p className="text-[15px] leading-relaxed text-white/85">
-                          {card.text}
-                          <span
-                            className="ml-0.5 inline-block h-[15px] w-[7px] translate-y-[2px] animate-pulse"
-                            style={{ backgroundColor: lvl.accent }}
-                          />
-                        </p>
-                      ) : (
-                        <StoryReader text={card.text} accent={lvl.accent} />
-                      )
-                    ) : (
-                      <Skeleton />
+          {/* Mobile: one level at a time behind a tab switcher — three full cards
+              stacked vertically doesn't fit a small screen. The pill behind the
+              active tab and the card below both use layout animation so switching
+              feels like a morph, not a flash/jump cut. */}
+          <div className="md:hidden">
+            <div className="relative mb-4 flex rounded-full border border-edge bg-panel/60 p-1">
+              {LEVELS.map((lvl) => {
+                const isActive = mobileLevel === lvl.key;
+                return (
+                  <button
+                    key={lvl.key}
+                    onClick={() => setMobileLevel(lvl.key)}
+                    className="relative flex-1 rounded-full px-2 py-2 text-xs font-semibold transition-colors"
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="mobileLevelPill"
+                        className="absolute inset-0 rounded-full"
+                        style={{ backgroundColor: lvl.accent }}
+                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      />
                     )}
-                  </div>
+                    <span className={`relative z-10 ${isActive ? "text-black" : "text-white/55"}`}>
+                      {lvl.short}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                  <div className="mt-4 flex flex-wrap gap-1.5 border-t border-edge pt-3">
-                    {ACTIONS.map((a) => (
-                      <button
-                        key={a.style}
-                        onClick={() => streamCard(current, lvl.key, a.style)}
-                        disabled={card.streaming}
-                        className="rounded-lg border border-edge px-2.5 py-1 text-[11px] text-white/55 transition hover:border-white/25 hover:text-white disabled:opacity-40"
-                        style={
-                          card.style === a.style && !card.streaming
-                            ? { color: lvl.accent, borderColor: lvl.accent }
-                            : undefined
-                        }
-                      >
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                </motion.article>
-              );
-            })}
+            <motion.div layout transition={{ type: "spring", stiffness: 320, damping: 34 }}>
+              <AnimatePresence mode="wait">
+                {LEVELS.filter((lvl) => lvl.key === mobileLevel).map((lvl) => (
+                  <LevelCard
+                    key={lvl.key}
+                    lvl={lvl}
+                    card={cards[lvl.key]}
+                    onAction={(style) => streamCard(current, lvl.key, style)}
+                    motion={{
+                      initial: { opacity: 0, x: 12 },
+                      animate: { opacity: 1, x: 0 },
+                      exit: { opacity: 0, x: -12 },
+                      transition: { duration: 0.22 },
+                    }}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
           </div>
 
           <AnimatePresence>
@@ -417,6 +411,88 @@ export default function Home() {
         Live explanations · follow-ups · knowledge branches · self-testing
       </footer>
     </main>
+  );
+}
+
+/** One audience-level card — header, streaming/story text, and the Simpler/Deeper/Example row. Shared by the desktop 3-up grid and the mobile tab view so both stay in sync. */
+function LevelCard({
+  lvl,
+  card,
+  onAction,
+  motion: motionProps,
+}: {
+  lvl: { key: Audience; label: string; tag: string; accent: string; glyph: string; short: string };
+  card: Card;
+  onAction: (style: Style) => void;
+  motion?: { initial?: any; animate?: any; exit?: any; transition?: any };
+}) {
+  return (
+    <motion.article
+      initial={motionProps?.initial ?? { opacity: 0, y: 16 }}
+      animate={motionProps?.animate ?? { opacity: 1, y: 0 }}
+      exit={motionProps?.exit}
+      transition={motionProps?.transition}
+      className="relative flex flex-col rounded-2xl border border-edge bg-panel/60 p-5"
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl"
+        style={{ backgroundColor: lvl.accent }}
+      />
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="font-display text-lg font-semibold" style={{ color: lvl.accent }}>
+            {lvl.glyph}
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold text-white">{lvl.label}</h2>
+            <p className="text-[11px] text-white/40">
+              {card.style === "base" ? lvl.tag : `${card.style} view`}
+            </p>
+          </div>
+        </div>
+        {card.text && !card.streaming && <CopyButton text={card.text} accent={lvl.accent} />}
+      </div>
+
+      <div className="min-h-[96px] flex-1">
+        {card.text ? (
+          card.streaming ? (
+            // Still streaming: show the raw growing text with a
+            // blinking cursor. Pagination only kicks in once the
+            // full explanation has arrived — you can't page
+            // through slides that don't exist yet.
+            <p className="text-[15px] leading-relaxed text-white/85">
+              {card.text}
+              <span
+                className="ml-0.5 inline-block h-[15px] w-[7px] translate-y-[2px] animate-pulse"
+                style={{ backgroundColor: lvl.accent }}
+              />
+            </p>
+          ) : (
+            <StoryReader text={card.text} accent={lvl.accent} />
+          )
+        ) : (
+          <Skeleton />
+        )}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-1.5 border-t border-edge pt-3">
+        {ACTIONS.map((a) => (
+          <button
+            key={a.style}
+            onClick={() => onAction(a.style)}
+            disabled={card.streaming}
+            className="rounded-lg border border-edge px-2.5 py-1 text-[11px] text-white/55 transition hover:border-white/25 hover:text-white disabled:opacity-40"
+            style={
+              card.style === a.style && !card.streaming
+                ? { color: lvl.accent, borderColor: lvl.accent }
+                : undefined
+            }
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </motion.article>
   );
 }
 
