@@ -100,6 +100,9 @@ User types a topic
 
 ## Roadmap
 
+- **Personalized learning profile** — remember a user's background, interests, and preferred level across sessions (not just recent-topic history), so explanations and analogies adapt to what they already know instead of starting cold every time.
+- **Adaptive quiz difficulty** — scale question difficulty per topic based on that user's past quiz performance, instead of a fixed 5 questions for everyone.
+- **Progress dashboard** — topics learned, quiz scores over time, and streaks, giving the personalization something to visibly build toward.
 - Concept diagrams (mermaid) generated per topic.
 - Shareable permalink per explanation.
 - Voice narration of each level.
