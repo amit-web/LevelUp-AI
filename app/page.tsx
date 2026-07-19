@@ -42,7 +42,8 @@ export default function Home() {
   const [quiz, setQuiz] = useState<Quiz[]>([]);
   const [devCode, setDevCode] = useState("");
   const [devVariables, setDevVariables] = useState<CodeVariable[]>([]);
-  const [codeStatus, setCodeStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [codeReason, setCodeReason] = useState("");
+  const [codeStatus, setCodeStatus] = useState<"idle" | "loading" | "ready" | "not-applicable" | "error">("idle");
   const [mobileLevel, setMobileLevel] = useState<Audience>("child");
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,6 +115,11 @@ export default function Home() {
           setCodeStatus("ready");
           return;
         }
+        if (res.ok && data.applicable === false) {
+          setCodeReason(data.reason || "This topic is conceptual rather than something a code demo can capture.");
+          setCodeStatus("not-applicable");
+          return;
+        }
         // BUG FIX: this used to retry identically on every failure, including
         // 4xx client errors (bad/too-long topic, missing key) that will
         // never succeed no matter how many times we resend the exact same
@@ -138,6 +144,7 @@ export default function Home() {
     setQuiz([]);
     setDevCode("");
     setDevVariables([]);
+    setCodeReason("");
     setCodeStatus("idle");
     pushHistory(q);
     window.scrollTo({ top: 260, behavior: "smooth" });
@@ -350,11 +357,20 @@ export default function Home() {
                   <span className="text-xs text-white/30">
                     {codeStatus === "loading"
                       ? "— generating an editable example…"
-                      : "— from the developer explanation, tweak the values and watch the console"}
+                      : codeStatus === "not-applicable"
+                        ? "— this topic doesn't have a natural code example"
+                        : "— from the developer explanation, tweak the values and watch the console"}
                   </span>
                 </div>
 
                 {codeStatus === "loading" && <PlaygroundSkeleton accent="#22D3C5" />}
+
+                {codeStatus === "not-applicable" && (
+                  <div className="rounded-2xl border border-edge bg-panel/60 px-5 py-4 text-sm">
+                    <p className="mb-1 font-medium text-white/85">This is theoretical knowledge — no code example fits here.</p>
+                    <p className="text-white/60">{codeReason}</p>
+                  </div>
+                )}
 
                 {codeStatus === "error" && (
                   <div className="flex items-center justify-between rounded-2xl border border-edge bg-panel/60 px-5 py-4 text-sm text-white/50">

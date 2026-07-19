@@ -5,13 +5,18 @@ export const runtime = "edge";
 const MODEL = "llama-3.3-70b-versatile";
 const URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const SYSTEM = `You write a short, self-contained JavaScript demo for a live, editable "code playground" that helps a developer understand a topic by tweaking values and watching the console output change.
+const SYSTEM = `You help build a live, editable "code playground" for a topic — but only when the topic actually has a natural, meaningful demonstration as runnable JavaScript (an algorithm, data structure, protocol, browser/JS-language mechanic, or something computable). Purely factual, historical, biological, physical, or conceptual topics that don't reduce to a computation or mechanism (e.g. "why is the sky blue", "history of Rome", "what is love") do NOT qualify — do not force a contrived or tangential code example onto them.
 
-Return ONLY a JSON object with:
+First decide whether the topic qualifies, then return ONLY a JSON object, nothing else — no prose before or after.
+
+If it qualifies, return:
+- "applicable": true
 - "code": a plain JavaScript snippet, runnable in a browser via a <script> tag (no imports, no Node-only APIs, no frameworks, no top-level await). 12-26 lines, formatted with a real newline between statements and 2-space indentation inside blocks — never a semicolon-joined single line. Demonstrate the actual mechanism of the topic, not just a fact about it. End with one or more console.log(...) calls whose output is visibly influenced by the variables below. No comments longer than one short line. No markdown fences.
 - "variables": an array of 2-4 objects, each { "name": string, "options": [2-3 short literal JS value strings] }. Each "name" MUST exactly match the identifier of a top-level statement "const NAME = VALUE;" declared near the top of "code" (single line only — no destructuring, no let/var, no multi-line values). "options" are alternate literal values a reader could swap in to see a meaningfully different console result — never repeat the value already used in "code". Keep each literal short (a number, a short string, or a small array/object on one line).
 
-Return ONLY the JSON object, nothing else — no prose before or after.`;
+If it does NOT qualify, return:
+- "applicable": false
+- "reason": one or two friendly sentences of genuine context about the topic explaining why a code demo doesn't fit — not just "this isn't code-related".`;
 
 function extractJson(text: string) {
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -65,6 +70,14 @@ export async function POST(req: NextRequest) {
     const text: string = data?.choices?.[0]?.message?.content ?? "";
     const parsed = extractJson(text);
 
+    if (parsed?.applicable === false) {
+      const reason = String(parsed.reason ?? "").trim();
+      return NextResponse.json({
+        applicable: false,
+        reason: reason || "This topic is conceptual rather than something a code demo can capture.",
+      });
+    }
+
     const code = (parsed.code ?? "").toString().trim();
     if (!code) return NextResponse.json({ error: "No code generated." }, { status: 502 });
 
@@ -82,7 +95,7 @@ export async function POST(req: NextRequest) {
           }))
       : [];
 
-    return NextResponse.json({ code, variables });
+    return NextResponse.json({ applicable: true, code, variables });
   } catch {
     return NextResponse.json({ error: "Could not generate code." }, { status: 500 });
   }
