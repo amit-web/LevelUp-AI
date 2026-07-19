@@ -21,6 +21,18 @@ const STYLE: Record<string, string> = {
   example: "Lead with one concrete, memorable real-world example, then a one-line takeaway. ",
 };
 
+// IMPROVEMENT: this request previously set no max_tokens at all, so a
+// response's length was bounded only by prompt wording — "child" + "deeper"
+// style could (correctly, but unpredictably) balloon into a long answer that
+// took a while to finish streaming and read as "stuck" to someone watching
+// the blinking cursor. Cap per audience so replies stay snappy regardless
+// of which follow-up style was requested.
+const MAX_TOKENS: Record<string, number> = {
+  child: 350,
+  developer: 450,
+  expert: 500,
+};
+
 function jsonError(message: string, status: number, detail?: string) {
   return new Response(JSON.stringify({ error: message, detail }), {
     status,
@@ -84,6 +96,7 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: true,
         temperature: 0.6,
+        max_tokens: MAX_TOKENS[audience],
         messages: [{ role: "user", content: prompt }],
       }),
       signal: controller.signal,
