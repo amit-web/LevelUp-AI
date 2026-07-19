@@ -1,6 +1,13 @@
 import { NextRequest } from "next/server";
 
-export const runtime = "edge";
+// HACKATHON-CRITICAL FIX: this route hung indefinitely (0 bytes, 30s+) on
+// the deployed Vercel site even after adding a 20s server-side watchdog —
+// the watchdog code was confirmed deployed, so the hang isn't in our logic,
+// it's specific to the Edge Runtime sandbox (`next dev` doesn't fully
+// emulate it, which is why this never reproduced locally). Node.js
+// serverless is the well-trodden path for a fetch-and-relay streaming
+// proxy on Vercel; switching off Edge removes that whole class of bug.
+export const runtime = "nodejs";
 
 const MODEL = "llama-3.3-70b-versatile";
 const URL = "https://api.groq.com/openai/v1/chat/completions";

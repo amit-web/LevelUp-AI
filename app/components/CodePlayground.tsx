@@ -111,6 +111,10 @@ function Toolbar({
   const { sandpack } = useSandpack();
   const [activeChip, setActiveChip] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Free-typed value per variable, for devs who want something other than
+  // the 2-3 canned presets — keyed by variable name so each row keeps its
+  // own draft independently.
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const dirty = activeChip !== null;
 
   function applyPreset(name: string, value: string) {
@@ -121,9 +125,16 @@ function Toolbar({
     setActiveChip(`${name}:${value}`);
   }
 
+  function applyCustom(name: string) {
+    const value = customValues[name]?.trim();
+    if (!value) return;
+    applyPreset(name, value);
+  }
+
   function reset() {
     sandpack.updateFile("/index.js", originalCode);
     setActiveChip(null);
+    setCustomValues({});
   }
 
   function copy() {
@@ -195,6 +206,23 @@ function Toolbar({
                   </button>
                 );
               })}
+              <input
+                type="text"
+                value={customValues[v.name] ?? ""}
+                onChange={(e) =>
+                  setCustomValues((c) => ({ ...c, [v.name]: e.target.value }))
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyCustom(v.name);
+                  }
+                }}
+                placeholder="custom…"
+                title={`Type any value for ${v.name}, then press Enter`}
+                className="w-20 rounded-full border border-dashed bg-transparent px-2.5 py-0.5 font-mono text-[11px] text-white/70 placeholder:text-white/25 focus:outline-none"
+                style={{ borderColor: "#1E232D" }}
+              />
             </div>
           ))}
         </div>
