@@ -2,7 +2,7 @@
 
 One topic, explained live at three depths — child, developer, expert — then go simpler, go deeper, branch into related ideas, and test yourself. All in one flow.
 
-Built with Next.js 14, TypeScript, Tailwind CSS, Framer Motion, and Google Gemini (streaming).
+Built with Next.js 14, TypeScript, Tailwind CSS, Framer Motion, and Groq (streaming).
 
 ## What it does
 
@@ -24,26 +24,18 @@ Open http://localhost:3000
 
 ## API key
 
-1. Get a free key at https://aistudio.google.com/app/apikey
+1. Get a free key at https://console.groq.com/keys
 2. Create a file named `.env.local` in the project root with:
    ```
-   GEMINI_API_KEY=your_key_here
+   GROQ_API_KEY=your_key_here
    ```
 3. Restart the dev server after adding it.
-
-The model is set in `app/api/stream/route.ts` and `app/api/extras/route.ts` as `gemini-2.0-flash`. If your key doesn't support it, run this to list available models and swap the name:
-
-```bash
-# PowerShell
-$key = (Get-Content .env.local) -replace 'GEMINI_API_KEY=',''
-(Invoke-RestMethod "https://generativelanguage.googleapis.com/v1beta/models?key=$key").models | Where-Object { $_.supportedGenerationMethods -contains "generateContent" } | Select-Object name
-```
 
 ## Deploy to Vercel
 
 1. Push this folder to a GitHub repo.
 2. Import it at https://vercel.com/new
-3. Add an environment variable `GEMINI_API_KEY` with your key.
+3. Add an environment variable `GROQ_API_KEY` with your key.
 4. Deploy → you get a live URL.
 
 The key stays server-side in the API routes and is never exposed to the browser.
