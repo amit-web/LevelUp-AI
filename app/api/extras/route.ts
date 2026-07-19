@@ -7,7 +7,7 @@ const URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const SYSTEM = `You help someone learn a topic more deeply. Given a topic, return a JSON object with:
 - "related": an array of exactly 4 closely related concepts worth learning next. Each is a short label (1-4 words), specific, not generic.
-- "quiz": an array of exactly 3 multiple-choice questions that test real understanding of the topic. Each item is { "question": string, "options": [4 strings], "correct": integer 0-3, "why": string (one short sentence explaining the correct answer) }.
+- "quiz": an array of exactly 5 multiple-choice questions that test real understanding of the topic, covering distinct aspects (don't ask near-duplicate questions). Each item is { "question": string, "options": [4 strings], "correct": integer 0-3, "why": string (one short sentence explaining the correct answer) }.
 Keep questions clear and unambiguous. Return ONLY the JSON object, nothing else.`;
 
 function extractJson(text: string) {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       ? parsed.related.slice(0, 4).map((r: unknown) => String(r))
       : [];
     const quiz = Array.isArray(parsed.quiz)
-      ? parsed.quiz.slice(0, 3).map((q: any) => ({
+      ? parsed.quiz.slice(0, 5).map((q: any) => ({
           question: String(q.question ?? ""),
           options: Array.isArray(q.options) ? q.options.slice(0, 4).map(String) : [],
           correct: Number.isInteger(q.correct) ? q.correct : 0,

@@ -1,6 +1,6 @@
 # Explain Any Level — AI learning tutor
 
-One topic, explained live at three depths — child, developer, expert — then go simpler, go deeper, branch into related ideas, and test yourself. All in one flow.
+**Most AI explainers give you one answer at one depth, and you find out it was the wrong one after you've already read it.** This one streams the same topic at three depths simultaneously — child, developer, expert — so you pick the level that fits *after* seeing all three, not before. Then go simpler, go deeper, branch into related ideas, try the concept as running code, and test yourself. All in one flow, no page reloads, no re-typing your question.
 
 Built with Next.js 14, TypeScript, Tailwind CSS, Framer Motion, and Groq (streaming).
 
@@ -8,8 +8,9 @@ Built with Next.js 14, TypeScript, Tailwind CSS, Framer Motion, and Groq (stream
 
 - **Live streaming** explanations at three levels at once (child / developer / expert).
 - **Follow-up actions** on every card: Simpler, Deeper, Example — re-streamed on demand.
+- **Try it live**: an AI-generated, editable JavaScript playground for the developer explanation — tweak a variable (preset or custom-typed) and watch the console output change in real time.
 - **Continue learning**: AI suggests related concepts as clickable branches (a knowledge tree).
-- **Test yourself**: AI-generated quiz that grades you and explains each answer.
+- **Test yourself**: a 5-question AI-generated quiz that grades you and explains each answer.
 - **Recent history** kept locally in your browser.
 
 ## Run locally

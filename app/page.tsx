@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NextStepsMap } from "./components/NextStepsMap";
 import { StoryReader } from "./components/StoryReader";
@@ -745,18 +745,56 @@ function QuizOption({
 
 /** Final score summary, shown once every question in the set has been answered. */
 function ScoreCard({ score, total }: { score: number; total: number }) {
+  const perfect = score === total;
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="rounded-2xl border border-expert/40 bg-expert/10 px-5 py-4 text-center"
+      className="relative rounded-2xl border border-expert/40 bg-expert/10 px-5 py-4 text-center"
     >
+      {perfect && <Confetti />}
       <span className="font-display text-2xl font-semibold text-white">
         {score}/{total}
       </span>
       <span className="ml-2 text-sm text-white/60">
-        {score === total ? "Nailed it." : score === 0 ? "Worth another read." : "Getting there."}
+        {perfect ? "Nailed it." : score === 0 ? "Worth another read." : "Getting there."}
       </span>
     </motion.div>
+  );
+}
+
+const CONFETTI_COLORS = ["#F5A524", "#22D3C5", "#A78BFA", "#34D399", "#F472B6"];
+
+/** A quick burst of colored particles fired once from the center of a perfect ScoreCard — no extra deps, just Framer Motion transforms + opacity. */
+function Confetti() {
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, i) => {
+        const angle = (Math.PI * 2 * i) / 18 + Math.random() * 0.4;
+        const distance = 60 + Math.random() * 50;
+        return {
+          id: i,
+          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+          dx: Math.cos(angle) * distance,
+          dy: Math.sin(angle) * distance - 20,
+          delay: Math.random() * 0.15,
+        };
+      }),
+    []
+  );
+
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {particles.map((p) => (
+        <motion.span
+          key={p.id}
+          className="absolute h-1.5 w-1.5 rounded-full"
+          style={{ backgroundColor: p.color }}
+          initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+          animate={{ opacity: 0, x: p.dx, y: p.dy, scale: 0.4 }}
+          transition={{ duration: 0.9, delay: p.delay, ease: "easeOut" }}
+        />
+      ))}
+    </div>
   );
 }
