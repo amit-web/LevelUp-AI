@@ -24,7 +24,18 @@ const MAX_SLIDE_CHARS = 130;
  * longer than that on its own.
  */
 function splitIntoSlides(text: string): string[] {
-  const sentences = text.match(/[^.!?]+[.!?]+(\s+|$)/g) ?? [text];
+  const sentences: string[] = text.match(/[^.!?]+[.!?]+(\s+|$)/g) ?? [];
+
+  // BUG FIX: the regex above requires terminal punctuation (.!?), so any
+  // trailing fragment without one — e.g. a response cut off by max_tokens,
+  // or a model that just doesn't end on punctuation — is invisible to
+  // `match` and used to vanish from the slides entirely. Recover it by
+  // comparing how much of `text` the regex actually consumed and treating
+  // whatever's left over as one final "sentence".
+  const matchedLength = sentences.reduce((sum, s) => sum + s.length, 0);
+  const remainder = text.slice(matchedLength).trim();
+  if (remainder) sentences.push(remainder);
+
   const slides: string[] = [];
   let current = "";
 

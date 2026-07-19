@@ -28,6 +28,15 @@ function jsonError(message: string, status: number, detail?: string) {
   });
 }
 
+// BUG FIX: this route had no timeout at all — a hung upstream connection (as
+// seen on the deployed Vercel site, where /api/stream returned zero bytes
+// for 45s+) meant the fetch (and later, each stream read) could wait
+// forever. The client then sat on "Thinking…" indefinitely with no error.
+// This watchdog aborts the request if either the initial connection or any
+// individual chunk read stalls past STALL_TIMEOUT_MS, turning a silent
+// infinite hang into a fast, visible error the UI can show/retry.
+const STALL_TIMEOUT_MS = 20_000;
+
 export async function POST(req: NextRequest) {
   const key = process.env.GROQ_API_KEY;
   if (!key) return jsonError("Server is missing GROQ_API_KEY.", 500);
@@ -51,8 +60,20 @@ export async function POST(req: NextRequest) {
 
   const prompt = `Explain the topic "${topic}" to ${AUDIENCE[audience]} ${STYLE[style]}Respond in plain text only — no markdown, no bullet points, no headings, no preamble like "Sure". Start directly with the explanation.`;
 
+  // One AbortController for the whole request/stream lifetime. `armWatchdog`
+  // is re-armed before every wait point (the initial fetch, then each
+  // `reader.read()`) so it only fires if THAT specific wait stalls too long
+  // — a slow-but-progressing stream never trips it.
+  const controller = new AbortController();
+  let watchdog: ReturnType<typeof setTimeout> | undefined;
+  function armWatchdog() {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => controller.abort(), STALL_TIMEOUT_MS);
+  }
+
   let upstream: Response;
   try {
+    armWatchdog();
     upstream = await fetch(URL, {
       method: "POST",
       headers: {
@@ -65,12 +86,18 @@ export async function POST(req: NextRequest) {
         temperature: 0.6,
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: controller.signal,
     });
-  } catch {
+  } catch (e) {
+    clearTimeout(watchdog);
+    if (e instanceof Error && e.name === "AbortError") {
+      return jsonError("The model service took too long to respond.", 504);
+    }
     return jsonError("Could not reach the model service.", 502);
   }
 
   if (!upstream.ok || !upstream.body) {
+    clearTimeout(watchdog);
     const detail = await upstream.text().catch(() => "");
     return jsonError("The model service returned an error.", 502, detail);
   }
@@ -81,10 +108,21 @@ export async function POST(req: NextRequest) {
   let buffer = "";
 
   const stream = new ReadableStream({
-    async pull(controller) {
-      const { done, value } = await reader.read();
+    async pull(streamController) {
+      let done: boolean, value: Uint8Array | undefined;
+      try {
+        armWatchdog();
+        ({ done, value } = await reader.read());
+        clearTimeout(watchdog);
+      } catch {
+        // Either a real network error or our own watchdog abort — either way
+        // the client needs to see this as a failure, not a silently closed
+        // (and therefore "successful but empty") stream.
+        streamController.error(new Error("The model service stalled mid-response."));
+        return;
+      }
       if (done) {
-        controller.close();
+        streamController.close();
         return;
       }
       buffer += decoder.decode(value, { stream: true });
@@ -98,13 +136,14 @@ export async function POST(req: NextRequest) {
         try {
           const j = JSON.parse(payload);
           const txt = j?.choices?.[0]?.delta?.content;
-          if (txt) controller.enqueue(encoder.encode(txt));
+          if (txt) streamController.enqueue(encoder.encode(txt));
         } catch {
           /* partial json across chunks — ignore */
         }
       }
     },
     cancel() {
+      clearTimeout(watchdog);
       reader.cancel().catch(() => {});
     },
   });

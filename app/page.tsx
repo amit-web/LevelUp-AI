@@ -114,6 +114,12 @@ export default function Home() {
           setCodeStatus("ready");
           return;
         }
+        // BUG FIX: this used to retry identically on every failure, including
+        // 4xx client errors (bad/too-long topic, missing key) that will
+        // never succeed no matter how many times we resend the exact same
+        // request — it just burned 2 more requests and ~2.4s before failing
+        // anyway. Only 5xx/network failures are worth retrying.
+        if (res.status >= 400 && res.status < 500) break;
       } catch {}
       await new Promise((r) => setTimeout(r, 1200));
     }
@@ -151,6 +157,10 @@ export default function Home() {
             setQuiz(data.quiz || []);
             return;
           }
+          // BUG FIX: same blind-retry issue as fetchCode — a 4xx here (e.g.
+          // an empty/invalid topic) is deterministic and retrying it 3x
+          // just delays the eventual give-up with no chance of success.
+          if (res.status >= 400 && res.status < 500) break;
         } catch {}
         await new Promise((r) => setTimeout(r, 1500));
       }
