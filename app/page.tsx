@@ -142,7 +142,6 @@ export default function Home() {
     pushHistory(q);
     window.scrollTo({ top: 260, behavior: "smooth" });
 
-    // extras (related + quiz) ko cards ke saath parallel fire karo, retry ke saath
     (async () => {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
@@ -269,7 +268,6 @@ export default function Home() {
             Explaining <span className="font-medium text-white/70">&ldquo;{current}&rdquo;</span>
           </p>
 
-          {/* Desktop / tablet: all three levels visible at once, side by side. */}
           <div className="hidden gap-4 md:grid md:grid-cols-3">
             {LEVELS.map((lvl, i) => (
               <LevelCard
@@ -522,7 +520,6 @@ function Skeleton() {
   );
 }
 
-/** Placeholder shaped like the finished playground — toolbar + split editor/console — while the snippet generates. */
 function PlaygroundSkeleton({ accent }: { accent: string }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-edge" style={{ borderColor: `${accent}30` }}>
@@ -608,7 +605,6 @@ function QuizBlock({ quiz }: { quiz: Quiz[] }) {
   );
 }
 
-/** Shows how many questions are left, as both a filled bar and a short label. */
 function QuizProgressBar({ answered, total }: { answered: number; total: number }) {
   const pct = total === 0 ? 0 : (answered / total) * 100;
   const remaining = total - answered;
@@ -633,7 +629,6 @@ function QuizProgressBar({ answered, total }: { answered: number; total: number 
   );
 }
 
-/** One question card: the prompt, its option grid, and the reveal explanation. */
 function QuizQuestion({
   index,
   data,
@@ -743,7 +738,6 @@ function QuizOption({
   );
 }
 
-/** Final score summary, shown once every question in the set has been answered. */
 function ScoreCard({ score, total }: { score: number; total: number }) {
   const perfect = score === total;
   return (

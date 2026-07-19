@@ -34,12 +34,6 @@ type SkillNodeData = {
   onSelect: (label: string) => void;
 };
 
-/**
- * A single node in the skill tree.
- * - The root node (current topic) is inert — it's context, not a link.
- * - Leaf nodes (related topics) are clickable and get a hover lift + glow,
- *   matching the "video game skill tree" feel the design calls for.
- */
 function SkillNode({ data }: NodeProps<SkillNodeData>) {
   const { label, isRoot, disabled, onSelect } = data;
 

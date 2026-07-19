@@ -117,6 +117,7 @@ function Toolbar({
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const dirty = activeChip !== null;
 
+  /** Swaps a variable's value in the live file via regex replace, then re-runs (autorun) to show the new console output. */
   function applyPreset(name: string, value: string) {
     const current = sandpack.files["/index.js"]?.code ?? originalCode;
     const re = new RegExp(`(\\bconst\\s+${escapeRegExp(name)}\\s*=\\s*)[^;]+;`);

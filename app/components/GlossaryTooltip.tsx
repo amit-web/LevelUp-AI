@@ -89,10 +89,6 @@ const MATCHER = new RegExp(
   "gi"
 );
 
-/**
- * Splits `text` on glossary terms and returns an array of plain strings and
- * <GlossaryTerm> elements, ready to drop straight into JSX.
- */
 export function renderWithGlossary(text: string, accent: string): ReactNode[] {
   const parts = text.split(MATCHER);
   return parts.map((part, i) => {
@@ -107,7 +103,6 @@ export function renderWithGlossary(text: string, accent: string): ReactNode[] {
   });
 }
 
-/** A single glowing, hoverable/focusable word with a definition popover. */
 function GlossaryTerm({
   word,
   definition,
